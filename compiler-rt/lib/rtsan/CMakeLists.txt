@@ -99,5 +99,6 @@ else()
 endif()
 
 if(COMPILER_RT_INCLUDE_TESTS)
+  message(STATUS "Configuring rtsan tests")
   add_subdirectory(tests)
 endif()

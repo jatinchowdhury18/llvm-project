@@ -14,19 +14,29 @@
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 
 #include <new>
+
+#if ! SANITIZER_WINDOWS
 #include <pthread.h>
+#else
+#include <windows.h>
+#endif
 
 using namespace __sanitizer;
 using namespace __rtsan;
 
+#if ! SANITIZER_WINDOWS
 static pthread_key_t context_key;
 static pthread_once_t key_once = PTHREAD_ONCE_INIT;
+#else
+static DWORD context_key = 0;
+#endif
 
 // InternalFree cannot be passed directly to pthread_key_create
 // because it expects a signature with only one arg
 static void InternalFreeWrapper(void *ptr) { __sanitizer::InternalFree(ptr); }
 
 static __rtsan::Context &GetContextForThisThreadImpl() {
+#if ! SANITIZER_WINDOWS
   auto MakeThreadLocalContextKey = []() {
     CHECK_EQ(pthread_key_create(&context_key, InternalFreeWrapper), 0);
   };
@@ -42,6 +52,28 @@ static __rtsan::Context &GetContextForThisThreadImpl() {
   }
 
   return *current_thread_context;
+#else
+  if (context_key == 0) {
+    context_key = TlsAlloc();
+    CHECK_NE(context_key, TLS_OUT_OF_INDEXES);
+  }
+
+  Context *current_thread_context =
+    static_cast<Context *>(TlsGetValue(context_key));
+  if (current_thread_context == nullptr) {
+    current_thread_context =
+        static_cast<Context *>(InternalAlloc(sizeof(Context)));
+    new (current_thread_context) Context();
+    TlsSetValue(context_key, current_thread_context);
+  }
+
+  return *current_thread_context;
+
+  // @TODO:
+  // - call TlsFree when we're done with the context key
+  // - call InternalFree for the context
+
+#endif
 }
 
 __rtsan::Context::Context() = default;

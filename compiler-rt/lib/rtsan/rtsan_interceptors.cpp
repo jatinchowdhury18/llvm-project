@@ -41,13 +41,16 @@ void OSSpinLockLock(volatile OSSpinLock *__lock);
 #include <malloc.h>
 #endif
 
-#include <fcntl.h>
+#if ! SANITIZER_WINDOWS
 #include <pthread.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#endif
+
+#include <fcntl.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <sys/socket.h>
 #include <time.h>
-#include <unistd.h>
 
 using namespace __sanitizer;
 
@@ -59,6 +62,7 @@ struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
 
 // Filesystem
 
+#if ! SANITIZER_WINDOWS
 INTERCEPTOR(int, open, const char *path, int oflag, ...) {
   // TODO Establish whether we should intercept here if the flag contains
   // O_NONBLOCK
@@ -74,6 +78,7 @@ INTERCEPTOR(int, open, const char *path, int oflag, ...) {
 
   return REAL(open)(path, oflag);
 }
+#endif
 
 #if SANITIZER_INTERCEPT_OPEN64
 INTERCEPTOR(int, open64, const char *path, int oflag, ...) {
@@ -96,6 +101,7 @@ INTERCEPTOR(int, open64, const char *path, int oflag, ...) {
 #define RTSAN_MAYBE_INTERCEPT_OPEN64
 #endif // SANITIZER_INTERCEPT_OPEN64
 
+#if ! SANITIZER_WINDOWS
 INTERCEPTOR(int, openat, int fd, const char *path, int oflag, ...) {
   // TODO Establish whether we should intercept here if the flag contains
   // O_NONBLOCK
@@ -111,6 +117,7 @@ INTERCEPTOR(int, openat, int fd, const char *path, int oflag, ...) {
 
   return REAL(openat)(fd, path, oflag);
 }
+#endif
 
 #if SANITIZER_INTERCEPT_OPENAT64
 INTERCEPTOR(int, openat64, int fd, const char *path, int oflag, ...) {
@@ -133,6 +140,7 @@ INTERCEPTOR(int, openat64, int fd, const char *path, int oflag, ...) {
 #define RTSAN_MAYBE_INTERCEPT_OPENAT64
 #endif // SANITIZER_INTERCEPT_OPENAT64
 
+#if ! SANITIZER_WINDOWS
 INTERCEPTOR(int, creat, const char *path, mode_t mode) {
   // TODO Establish whether we should intercept here if the flag contains
   // O_NONBLOCK
@@ -140,6 +148,7 @@ INTERCEPTOR(int, creat, const char *path, mode_t mode) {
   const int result = REAL(creat)(path, mode);
   return result;
 }
+#endif
 
 #if SANITIZER_INTERCEPT_CREAT64
 INTERCEPTOR(int, creat64, const char *path, mode_t mode) {
@@ -265,6 +274,7 @@ INTERCEPTOR(int, puts, const char *s) {
   return REAL(puts)(s);
 }
 
+#if ! SANITIZER_WINDOWS
 INTERCEPTOR(ssize_t, read, int fd, void *buf, size_t count) {
   __rtsan_notify_intercepted_call("read");
   return REAL(read)(fd, buf, count);
@@ -279,6 +289,7 @@ INTERCEPTOR(ssize_t, pread, int fd, void *buf, size_t count, off_t offset) {
   __rtsan_notify_intercepted_call("pread");
   return REAL(pread)(fd, buf, count, offset);
 }
+#endif
 
 #if SANITIZER_INTERCEPT_PREAD64
 INTERCEPTOR(ssize_t, pread64, int fd, void *buf, size_t count, off_t offset) {
@@ -290,6 +301,7 @@ INTERCEPTOR(ssize_t, pread64, int fd, void *buf, size_t count, off_t offset) {
 #define RTSAN_MAYBE_INTERCEPT_PREAD64
 #endif // SANITIZER_INTERCEPT_PREAD64
 
+#if ! SANITIZER_WINDOWS
 INTERCEPTOR(ssize_t, readv, int fd, const struct iovec *iov, int iovcnt) {
   __rtsan_notify_intercepted_call("readv");
   return REAL(readv)(fd, iov, iovcnt);
@@ -300,6 +312,7 @@ INTERCEPTOR(ssize_t, pwrite, int fd, const void *buf, size_t count,
   __rtsan_notify_intercepted_call("pwrite");
   return REAL(pwrite)(fd, buf, count, offset);
 }
+#endif
 
 #if SANITIZER_INTERCEPT_PWRITE64
 INTERCEPTOR(ssize_t, pwrite64, int fd, const void *buf, size_t count,
@@ -312,10 +325,12 @@ INTERCEPTOR(ssize_t, pwrite64, int fd, const void *buf, size_t count,
 #define RTSAN_MAYBE_INTERCEPT_PWRITE64
 #endif // SANITIZER_INTERCEPT_PWRITE64
 
+#if ! SANITIZER_WINDOWS
 INTERCEPTOR(ssize_t, writev, int fd, const struct iovec *iov, int iovcnt) {
   __rtsan_notify_intercepted_call("writev");
   return REAL(writev)(fd, iov, iovcnt);
 }
+#endif
 
 // Concurrency
 #if SANITIZER_APPLE
@@ -339,6 +354,7 @@ INTERCEPTOR(int, pthread_spin_lock, pthread_spinlock_t *spinlock) {
 }
 #endif
 
+#if ! SANITIZER_WINDOWS
 INTERCEPTOR(int, pthread_create, pthread_t *thread, const pthread_attr_t *attr,
             void *(*start_routine)(void *), void *arg) {
   __rtsan_notify_intercepted_call("pthread_create");
@@ -396,6 +412,7 @@ INTERCEPTOR(int, pthread_rwlock_wrlock, pthread_rwlock_t *lock) {
   __rtsan_notify_intercepted_call("pthread_rwlock_wrlock");
   return REAL(pthread_rwlock_wrlock)(lock);
 }
+#endif
 
 // Sleeping
 
@@ -404,10 +421,12 @@ INTERCEPTOR(unsigned int, sleep, unsigned int s) {
   return REAL(sleep)(s);
 }
 
+#if ! SANITIZER_WINDOWS
 INTERCEPTOR(int, usleep, useconds_t u) {
   __rtsan_notify_intercepted_call("usleep");
   return REAL(usleep)(u);
 }
+#endif
 
 INTERCEPTOR(int, nanosleep, const struct timespec *rqtp,
             struct timespec *rmtp) {
@@ -496,6 +515,7 @@ INTERCEPTOR(int, socket, int domain, int type, int protocol) {
   return REAL(socket)(domain, type, protocol);
 }
 
+#if ! SANITIZER_WINDOWS
 INTERCEPTOR(ssize_t, send, int sockfd, const void *buf, size_t len, int flags) {
   __rtsan_notify_intercepted_call("send");
   return REAL(send)(sockfd, buf, len, flags);
@@ -528,6 +548,7 @@ INTERCEPTOR(ssize_t, recvmsg, int socket, struct msghdr *message, int flags) {
   __rtsan_notify_intercepted_call("recvmsg");
   return REAL(recvmsg)(socket, message, flags);
 }
+#endif
 
 INTERCEPTOR(int, shutdown, int socket, int how) {
   __rtsan_notify_intercepted_call("shutdown");
@@ -551,6 +572,7 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(pvalloc);
 #endif
 
+#if ! SANITIZER_WINDOWS
   INTERCEPT_FUNCTION(open);
   RTSAN_MAYBE_INTERCEPT_OPEN64;
   INTERCEPT_FUNCTION(openat);
@@ -575,6 +597,7 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_CREAT64;
   INTERCEPT_FUNCTION(puts);
   INTERCEPT_FUNCTION(fputs);
+#endif
 
 #if SANITIZER_APPLE
   INTERCEPT_FUNCTION(OSSpinLockLock);
@@ -583,6 +606,7 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(pthread_spin_lock);
 #endif
 
+#if ! SANITIZER_WINDOWS
   INTERCEPT_FUNCTION(pthread_create);
   INTERCEPT_FUNCTION(pthread_mutex_lock);
   INTERCEPT_FUNCTION(pthread_mutex_unlock);
@@ -607,4 +631,5 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(recvmsg);
   INTERCEPT_FUNCTION(recvfrom);
   INTERCEPT_FUNCTION(shutdown);
+#endif
 }
