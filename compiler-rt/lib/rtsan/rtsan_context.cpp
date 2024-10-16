@@ -18,6 +18,7 @@
 #if ! SANITIZER_WINDOWS
 #include <pthread.h>
 #else
+#include <stdio.h>
 #include <windows.h>
 #endif
 
@@ -54,18 +55,22 @@ static __rtsan::Context &GetContextForThisThreadImpl() {
   return *current_thread_context;
 #else
   if (context_key == 0) {
+    printf ("Allocating context key\n");
     context_key = TlsAlloc();
     CHECK_NE(context_key, TLS_OUT_OF_INDEXES);
   }
 
+  printf ("Retrieving context\n");
   Context *current_thread_context =
     static_cast<Context *>(TlsGetValue(context_key));
   if (current_thread_context == nullptr) {
+    printf ("Allocating context\n");
     current_thread_context =
         static_cast<Context *>(InternalAlloc(sizeof(Context)));
     new (current_thread_context) Context();
     TlsSetValue(context_key, current_thread_context);
   }
+  printf ("Using context %p\n", current_thread_context);
 
   return *current_thread_context;
 

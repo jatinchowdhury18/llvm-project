@@ -226,6 +226,10 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  if (TC.getSanitizerArgs(Args).needsRtsanRt()) {
+    CmdArgs.push_back(TC.getCompilerRTArgString(Args, "rtsan"));
+  }
+
   Args.AddAllArgValues(CmdArgs, options::OPT__SLASH_link);
 
   // Control Flow Guard checks
@@ -824,6 +828,7 @@ SanitizerMask MSVCToolChain::getSupportedSanitizers() const {
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
+  Res |= SanitizerKind::Realtime;
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
   Res &= ~SanitizerKind::CFIMFCall;

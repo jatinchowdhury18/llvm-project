@@ -555,18 +555,24 @@ INTERCEPTOR(int, shutdown, int socket, int how) {
   return REAL(shutdown)(socket, how);
 }
 
+// At least one interceptor working/test
+// Context
+// gtest or lit test
+
+// Put Windows interceptors in another file
+
 // Preinit
 void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(calloc);
   INTERCEPT_FUNCTION(free);
   INTERCEPT_FUNCTION(malloc);
   INTERCEPT_FUNCTION(realloc);
-  INTERCEPT_FUNCTION(reallocf);
-  INTERCEPT_FUNCTION(valloc);
-  RTSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC;
-  INTERCEPT_FUNCTION(posix_memalign);
+  // INTERCEPT_FUNCTION(reallocf);
+  // INTERCEPT_FUNCTION(valloc);
+  // RTSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC;
+  // INTERCEPT_FUNCTION(posix_memalign);
 #if SANITIZER_INTERCEPT_MEMALIGN
-  INTERCEPT_FUNCTION(memalign);
+  // INTERCEPT_FUNCTION(memalign);
 #endif
 #if SANITIZER_INTERCEPT_PVALLOC
   INTERCEPT_FUNCTION(pvalloc);
